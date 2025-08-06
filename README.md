@@ -20,7 +20,7 @@ A real-time web dashboard for visualizing Rate of Perceived Exertion (RPE) data 
 ### Option 1: Deploy to Heroku (Recommended)
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/cofc-soccer-rpe-dashboard.git
+git clone https://github.com/wnorowskie/cofc-soccer-rpe-dashboard.git
 cd cofc-soccer-rpe-dashboard
 
 # Run the automated deployment script
