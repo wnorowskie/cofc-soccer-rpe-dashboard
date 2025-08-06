@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CofC Men's Soccer - RPE Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .stats-bar {
+            background: #f8f9fa;
+            padding: 20px;
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 1px solid #dee2e6;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+            margin: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .charts-container {
+            padding: 30px;
+        }
+        
+        .chart-section {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .chart-title {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .chart-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .refresh-section {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-live {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-offline {
+            background: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .last-updated {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .stats-bar {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .charts-container {
+                padding: 20px;
+            }
+            
+            .stat-item {
+                margin: 5px 0;
+            }
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚽ CofC Men's Soccer</h1>
+            <div class="subtitle">Rate of Perceived Exertion Dashboard</div>
+        </div>
+        
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-value">{{ total_players }}</div>
+                <div class="stat-label">Total Players</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ sessions|length }}</div>
+                <div class="stat-label">Sessions Analyzed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">
+                    <span class="status-indicator {% if data_source == 'Google Sheet' %}status-live{% else %}status-offline{% endif %}"></span>
+                    {{ data_source }}
+                </div>
+                <div class="stat-label">Data Source</div>
+            </div>
+        </div>
+        
+        <div class="charts-container">
+            <div class="chart-section">
+                <h2 class="chart-title">📊 Average RPE per Session</h2>
+                <img src="data:image/png;base64,{{ avg_chart }}" class="chart-image" alt="Average RPE Chart">
+            </div>
+            
+            <div class="chart-section">
+                <h2 class="chart-title">📈 RPE Distribution by Session</h2>
+                <img src="data:image/png;base64,{{ dist_chart }}" class="chart-image" alt="Distribution Chart">
+            </div>
+            
+            <div class="chart-section">
+                <h2 class="chart-title">👥 Individual Player Dashboard</h2>
+                <img src="data:image/png;base64,{{ player_chart }}" class="chart-image" alt="Player Dashboard">
+            </div>
+        </div>
+        
+        <div class="refresh-section">
+            <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh Dashboard</button>
+            <button class="refresh-btn" onclick="autoRefresh()">⚡ Auto-Refresh (30s)</button>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <div>Loading fresh data...</div>
+            </div>
+            
+            <div class="last-updated">
+                Last updated: {{ last_updated }}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let autoRefreshInterval = null;
+        
+        function refreshDashboard() {
+            document.getElementById('loading').style.display = 'block';
+            window.location.reload();
+        }
+        
+        function autoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                event.target.textContent = '⚡ Auto-Refresh (30s)';
+                event.target.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            } else {
+                autoRefreshInterval = setInterval(() => {
+                    refreshDashboard();
+                }, 30000);
+                event.target.textContent = '⏹️ Stop Auto-Refresh';
+                event.target.style.background = 'linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)';
+            }
+        }
+        
+        // Add keyboard shortcut for refresh
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                refreshDashboard();
+            }
+        });
+        
+        // Show session details on hover
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Sessions analyzed:', '{{ sessions_json }}');
+        });
+    </script>
+</body>
+</html>
