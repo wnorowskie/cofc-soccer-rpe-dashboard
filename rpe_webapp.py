@@ -51,32 +51,52 @@ def load_data():
     
     return df, data_source
 
-def generate_avg_chart(df_filtered, first_three_sessions):
+def generate_avg_chart(df_filtered, all_sessions):
     """Generate average RPE chart"""
     plt.figure(figsize=(10, 6))
     avg_rpe = df_filtered.groupby('session_key')['rpe'].mean()
-    avg_rpe = avg_rpe.reindex(first_three_sessions)
+    avg_rpe = avg_rpe.reindex(all_sessions)
     
     bars = plt.bar(range(len(avg_rpe)), avg_rpe.values, color='skyblue', alpha=0.7)
     plt.xlabel('Session')
     plt.ylabel('Average RPE')
     plt.title('Average RPE per Session')
     
-    # Create clean labels without problematic characters
+    # Create cleaner labels for x-axis
     clean_labels = []
-    for session in first_three_sessions:
-        # Replace problematic en-dash with regular dash and split
-        clean_session = session.replace('â\x80\x93', '-').replace('–', '-')
-        if ' - ' in clean_session:
-            parts = clean_session.split(' - ')
-            if len(parts) >= 2:
-                date_part = parts[0].strip()
-                period_part = parts[1].strip()
-                clean_labels.append(f"{date_part}\\n{period_part}")
+    for session in avg_rpe.index:
+        try:
+            # Try different splitting patterns
+            if ' – ' in session:
+                parts = session.split(' – ')
+            elif ' - ' in session:
+                parts = session.split(' - ')
             else:
-                clean_labels.append(clean_session)
-        else:
-            clean_labels.append(clean_session)
+                parts = session.split()
+            
+            if len(parts) >= 2:
+                date_str = parts[0]  # e.g., "2025-08-05"
+                period = parts[1]    # e.g., "Morning" or "Afternoon"
+                
+                # Clean the period string of any special characters
+                period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
+                
+                # Convert date to MM/DD format and period to AM/PM
+                date_obj = pd.to_datetime(date_str)
+                formatted_date = date_obj.strftime('%m/%d')
+                
+                if 'Morning' in period_clean or 'AM' in period_clean:
+                    period_short = 'AM'
+                elif 'Afternoon' in period_clean or 'PM' in period_clean:
+                    period_short = 'PM'
+                else:
+                    period_short = 'AM' if period_clean.lower().startswith('m') else 'PM'
+                
+                clean_labels.append(f"{formatted_date} {period_short}")
+            else:
+                clean_labels.append(session[:8])
+        except:
+            clean_labels.append(f"S{len(clean_labels)+1}")
     
     plt.xticks(range(len(avg_rpe)), clean_labels, rotation=45)
     plt.ylim(0, 10)
@@ -91,32 +111,53 @@ def generate_avg_chart(df_filtered, first_three_sessions):
     
     return img_str
 
-def generate_distribution_chart(df_filtered, first_three_sessions):
+def generate_distribution_chart(df_filtered, all_sessions):
     """Generate distribution chart"""
     plt.figure(figsize=(10, 6))
     
     session_data = []
     session_labels = []
-    for session in first_three_sessions:
+    for session in all_sessions:
         session_rpe = df_filtered[df_filtered['session_key'] == session]['rpe']
         session_data.append(session_rpe)
         
-        # Clean the session key
-        clean_session = session.replace('â\x80\x93', '-').replace('–', '-')
-        if ' - ' in clean_session:
-            parts = clean_session.split(' - ')
-            if len(parts) >= 2:
-                date_part = parts[0].strip()
-                period_part = parts[1].strip()
-                session_labels.append(f"{date_part}\\n{period_part}")
+        # Create clean labels in MM/DD AM/PM format
+        try:
+            if ' – ' in session:
+                parts = session.split(' – ')
+            elif ' - ' in session:
+                parts = session.split(' - ')
             else:
-                session_labels.append(clean_session)
-        else:
-            session_labels.append(clean_session)
+                parts = session.split()
+            
+            if len(parts) >= 2:
+                date_str = parts[0]
+                period = parts[1]
+                
+                # Clean the period string
+                period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
+                
+                # Convert to MM/DD AM/PM format
+                date_obj = pd.to_datetime(date_str)
+                formatted_date = date_obj.strftime('%m/%d')
+                
+                if 'Morning' in period_clean or 'AM' in period_clean:
+                    period_short = 'AM'
+                elif 'Afternoon' in period_clean or 'PM' in period_clean:
+                    period_short = 'PM'
+                else:
+                    period_short = 'AM' if period_clean.lower().startswith('m') else 'PM'
+                
+                session_labels.append(f"{formatted_date}\\n{period_short}")
+            else:
+                session_labels.append(session[:8])
+        except:
+            session_labels.append(f"S{len(session_labels)+1}")
     
     box_plot = plt.boxplot(session_data, tick_labels=session_labels, patch_artist=True)
     
-    colors = ['lightblue', 'lightcoral', 'lightgreen']
+    # Generate enough colors for all sessions
+    colors = plt.cm.Set3(np.linspace(0, 1, len(session_data)))
     for patch, color in zip(box_plot['boxes'], colors):
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
@@ -136,7 +177,7 @@ def generate_distribution_chart(df_filtered, first_three_sessions):
     
     return img_str
 
-def generate_player_dashboard(df_filtered, first_three_sessions):
+def generate_player_dashboard(df_filtered, all_sessions):
     """Generate player dashboard"""
     players = df_filtered['player'].unique()
     
@@ -165,7 +206,7 @@ def generate_player_dashboard(df_filtered, first_three_sessions):
         player_data = df_filtered[df_filtered['player'] == player]
         
         player_complete = []
-        for session in first_three_sessions:
+        for session in all_sessions:
             session_data = player_data[player_data['session_key'] == session]
             if len(session_data) > 0:
                 player_complete.append({'session_key': session, 'rpe': session_data['rpe'].iloc[0]})
@@ -176,33 +217,59 @@ def generate_player_dashboard(df_filtered, first_three_sessions):
         
         valid_data = player_df.dropna()
         if len(valid_data) > 0:
-            ax.plot(range(len(first_three_sessions)), player_df['rpe'], 'o-', linewidth=2, markersize=6)
+            ax.plot(range(len(all_sessions)), player_df['rpe'], 'o-', linewidth=2, markersize=6)
             ax.set_ylim(0, 10)
         
         ax.set_title(player, fontsize=10, pad=10)
         ax.set_xlabel('Session', fontsize=8)
         ax.set_ylabel('RPE', fontsize=8)
-        ax.set_xticks(range(len(first_three_sessions)))
+        ax.set_xticks(range(len(all_sessions)))
         
-        # Create clean session labels
+        # Create readable labels for x-axis in MM/DD AM/PM format
         session_labels = []
-        for s in first_three_sessions:
-            clean_s = s.replace('â\x80\x93', '-').replace('–', '-')
-            if ' - ' in clean_s:
-                parts = clean_s.split(' - ')
-                if len(parts) >= 2:
-                    session_labels.append(parts[1].strip())  # Just the session period
+        for s in all_sessions:
+            try:
+                # Try different splitting patterns
+                if ' – ' in s:
+                    parts = s.split(' – ')
+                elif ' - ' in s:
+                    parts = s.split(' - ')
                 else:
-                    session_labels.append(clean_s.split()[-1] if ' ' in clean_s else clean_s)
-            else:
-                session_labels.append(clean_s.split()[-1] if ' ' in clean_s else clean_s)
-        ax.set_xticklabels(session_labels, rotation=45, fontsize=8)
+                    parts = s.split()
+                
+                if len(parts) >= 2:
+                    date_str = parts[0]  # e.g., "2025-08-05"
+                    period = parts[1]    # e.g., "Morning" or "Afternoon"
+                    
+                    # Clean the period string of any special characters
+                    period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
+                    
+                    # Convert date to MM/DD format
+                    date_obj = pd.to_datetime(date_str)
+                    formatted_date = date_obj.strftime('%m/%d')
+                    
+                    # Convert period to AM/PM
+                    if 'Morning' in period_clean or 'AM' in period_clean:
+                        period_short = 'AM'
+                    elif 'Afternoon' in period_clean or 'PM' in period_clean:
+                        period_short = 'PM'
+                    else:
+                        period_short = 'AM' if period_clean.lower().startswith('m') else 'PM'
+                    
+                    session_labels.append(f"{formatted_date} {period_short}")
+                else:
+                    # Single part - just use it as is but truncated
+                    session_labels.append(s[:8])
+            except Exception as e:
+                # Final fallback
+                session_labels.append(f"S{len(session_labels)+1}")
+        ax.set_xticklabels(session_labels, rotation=0, fontsize=7)
         ax.grid(True, alpha=0.3)
     
     for i in range(n_players, len(axes_flat)):
         axes_flat[i].set_visible(False)
     
-    plt.suptitle('Player RPE Dashboard - First Three Sessions', fontsize=14, y=0.98)
+    plt.suptitle('Player RPE Dashboard - All Sessions', fontsize=14, y=0.98)
     plt.tight_layout()
     
     img_buffer = BytesIO()
@@ -220,15 +287,15 @@ def dashboard():
         # Load fresh data
         df, data_source = load_data()
         
-        # Get session data
+        # Get session data - use all sessions instead of first three
         session_order = df.drop_duplicates('session_key').sort_values('sort_key')['session_key'].tolist()
-        first_three_sessions = session_order[:3]
-        df_filtered = df[df['session_key'].isin(first_three_sessions)]
+        all_sessions = session_order
+        df_filtered = df[df['session_key'].isin(all_sessions)]
         
         # Generate charts
-        avg_chart = generate_avg_chart(df_filtered, first_three_sessions)
-        dist_chart = generate_distribution_chart(df_filtered, first_three_sessions)
-        player_chart = generate_player_dashboard(df_filtered, first_three_sessions)
+        avg_chart = generate_avg_chart(df_filtered, all_sessions)
+        dist_chart = generate_distribution_chart(df_filtered, all_sessions)
+        player_chart = generate_player_dashboard(df_filtered, all_sessions)
         
         # Get stats
         total_players = len(df_filtered['player'].unique())
@@ -238,8 +305,8 @@ def dashboard():
                              avg_chart=avg_chart,
                              dist_chart=dist_chart,
                              player_chart=player_chart,
-                             sessions=first_three_sessions,
-                             sessions_json=str(first_three_sessions),
+                             sessions=all_sessions,
+                             sessions_json=str(all_sessions),
                              total_players=total_players,
                              data_source=data_source,
                              last_updated=last_updated)
