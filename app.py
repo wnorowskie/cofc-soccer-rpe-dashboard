@@ -65,8 +65,10 @@ def generate_avg_chart(df_filtered, all_sessions):
     # Create clean labels without problematic characters
     clean_labels = []
     for session in all_sessions:
+        # Convert to string first to handle NaN values
+        session_str = str(session) if pd.notna(session) else "Unknown"
         # Replace problematic en-dash with regular dash and split
-        clean_session = session.replace('â\x80\x93', '-').replace('–', '-')
+        clean_session = session_str.replace('â\x80\x93', '-').replace('–', '-')
         if ' - ' in clean_session:
             parts = clean_session.split(' - ')
             if len(parts) >= 2:
@@ -102,7 +104,8 @@ def generate_distribution_chart(df_filtered, all_sessions):
         session_data.append(session_rpe)
         
         # Clean the session key
-        clean_session = session.replace('â\x80\x93', '-').replace('–', '-')
+        session_str = str(session) if pd.notna(session) else "Unknown"
+        clean_session = session_str.replace('â\x80\x93', '-').replace('–', '-')
         if ' - ' in clean_session:
             parts = clean_session.split(' - ')
             if len(parts) >= 2:
@@ -188,7 +191,8 @@ def generate_player_dashboard(df_filtered, all_sessions):
         # Create clean session labels
         session_labels = []
         for s in all_sessions:
-            clean_s = s.replace('â\x80\x93', '-').replace('–', '-')
+            s_str = str(s) if pd.notna(s) else "Unknown"
+            clean_s = s_str.replace('â\x80\x93', '-').replace('–', '-')
             if ' - ' in clean_s:
                 parts = clean_s.split(' - ')
                 if len(parts) >= 2:
