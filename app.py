@@ -65,20 +65,43 @@ def generate_avg_chart(df_filtered, all_sessions):
     # Create clean labels without problematic characters
     clean_labels = []
     for session in all_sessions:
-        # Convert to string first to handle NaN values
-        session_str = str(session) if pd.notna(session) else "Unknown"
-        # Replace problematic en-dash with regular dash and split
-        clean_session = session_str.replace('â\x80\x93', '-').replace('–', '-')
-        if ' - ' in clean_session:
-            parts = clean_session.split(' - ')
-            if len(parts) >= 2:
-                date_part = parts[0].strip()
-                period_part = parts[1].strip()
-                clean_labels.append(f"{date_part}\\n{period_part}")
+        try:
+            # Convert to string first to handle NaN values
+            session_str = str(session) if pd.notna(session) else "Unknown"
+            # Replace problematic en-dash with regular dash and split
+            clean_session = session_str.replace('â\x80\x93', '-').replace('–', '-')
+            
+            # Try different splitting patterns
+            if ' - ' in clean_session:
+                parts = clean_session.split(' - ')
+            elif ' – ' in clean_session:
+                parts = clean_session.split(' – ')
             else:
-                clean_labels.append(clean_session)
-        else:
-            clean_labels.append(clean_session)
+                parts = clean_session.split()
+            
+            if len(parts) >= 2:
+                date_str = parts[0]  # e.g., "2025-08-05"
+                period = parts[1]    # e.g., "Morning" or "Afternoon"
+                
+                # Clean the period string of any special characters
+                period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
+                
+                # Convert date to MM/DD format and period to AM/PM
+                date_obj = pd.to_datetime(date_str)
+                formatted_date = date_obj.strftime('%m/%d')
+                
+                if 'Morning' in period_clean or 'AM' in period_clean:
+                    period_short = 'AM'
+                elif 'Afternoon' in period_clean or 'PM' in period_clean:
+                    period_short = 'PM'
+                else:
+                    period_short = 'AM' if period_clean.lower().startswith('m') else 'PM'
+                
+                clean_labels.append(f"{formatted_date} {period_short}")
+            else:
+                clean_labels.append(session_str[:8])
+        except:
+            clean_labels.append(f"S{len(clean_labels)+1}")
     
     plt.xticks(range(len(avg_rpe)), clean_labels, rotation=45)
     plt.ylim(0, 10)
@@ -103,19 +126,43 @@ def generate_distribution_chart(df_filtered, all_sessions):
         session_rpe = df_filtered[df_filtered['session_key'] == session]['rpe']
         session_data.append(session_rpe)
         
-        # Clean the session key
-        session_str = str(session) if pd.notna(session) else "Unknown"
-        clean_session = session_str.replace('â\x80\x93', '-').replace('–', '-')
-        if ' - ' in clean_session:
-            parts = clean_session.split(' - ')
-            if len(parts) >= 2:
-                date_part = parts[0].strip()
-                period_part = parts[1].strip()
-                session_labels.append(f"{date_part}\\n{period_part}")
+        # Create clean labels in MM/DD AM/PM format
+        try:
+            # Convert to string first to handle NaN values
+            session_str = str(session) if pd.notna(session) else "Unknown"
+            clean_session = session_str.replace('â\x80\x93', '-').replace('–', '-')
+            
+            # Try different splitting patterns
+            if ' - ' in clean_session:
+                parts = clean_session.split(' - ')
+            elif ' – ' in clean_session:
+                parts = clean_session.split(' – ')
             else:
-                session_labels.append(clean_session)
-        else:
-            session_labels.append(clean_session)
+                parts = clean_session.split()
+            
+            if len(parts) >= 2:
+                date_str = parts[0]
+                period = parts[1]
+                
+                # Clean the period string
+                period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
+                
+                # Convert to MM/DD AM/PM format
+                date_obj = pd.to_datetime(date_str)
+                formatted_date = date_obj.strftime('%m/%d')
+                
+                if 'Morning' in period_clean or 'AM' in period_clean:
+                    period_short = 'AM'
+                elif 'Afternoon' in period_clean or 'PM' in period_clean:
+                    period_short = 'PM'
+                else:
+                    period_short = 'AM' if period_clean.lower().startswith('m') else 'PM'
+                
+                session_labels.append(f"{formatted_date}\n{period_short}")
+            else:
+                session_labels.append(session_str[:8])
+        except:
+            session_labels.append(f"S{len(session_labels)+1}")
     
     box_plot = plt.boxplot(session_data, labels=session_labels, patch_artist=True)
     
@@ -188,19 +235,47 @@ def generate_player_dashboard(df_filtered, all_sessions):
         ax.set_ylabel('RPE', fontsize=8)
         ax.set_xticks(range(len(all_sessions)))
         
-        # Create clean session labels
+        # Create readable labels for x-axis in MM/DD AM/PM format
         session_labels = []
         for s in all_sessions:
-            s_str = str(s) if pd.notna(s) else "Unknown"
-            clean_s = s_str.replace('â\x80\x93', '-').replace('–', '-')
-            if ' - ' in clean_s:
-                parts = clean_s.split(' - ')
-                if len(parts) >= 2:
-                    session_labels.append(parts[1].strip())  # Just the session period
+            try:
+                s_str = str(s) if pd.notna(s) else "Unknown"
+                clean_s = s_str.replace('â\x80\x93', '-').replace('–', '-')
+                
+                # Try different splitting patterns
+                if ' - ' in clean_s:
+                    parts = clean_s.split(' - ')
+                elif ' – ' in clean_s:
+                    parts = clean_s.split(' – ')
                 else:
-                    session_labels.append(clean_s.split()[-1] if ' ' in clean_s else clean_s)
-            else:
-                session_labels.append(clean_s.split()[-1] if ' ' in clean_s else clean_s)
+                    parts = clean_s.split()
+                
+                if len(parts) >= 2:
+                    date_str = parts[0]  # e.g., "2025-08-05"
+                    period = parts[1]    # e.g., "Morning" or "Afternoon"
+                    
+                    # Clean the period string of any special characters
+                    period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
+                    
+                    # Convert date to MM/DD format
+                    date_obj = pd.to_datetime(date_str)
+                    formatted_date = date_obj.strftime('%m/%d')
+                    
+                    # Convert period to AM/PM
+                    if 'Morning' in period_clean or 'AM' in period_clean:
+                        period_short = 'AM'
+                    elif 'Afternoon' in period_clean or 'PM' in period_clean:
+                        period_short = 'PM'
+                    else:
+                        period_short = 'AM' if period_clean.lower().startswith('m') else 'PM'
+                    
+                    session_labels.append(f"{formatted_date} {period_short}")
+                else:
+                    # Single part - just use it as is but truncated
+                    session_labels.append(s_str[:8])
+            except Exception as e:
+                # Final fallback
+                session_labels.append(f"S{len(session_labels)+1}")
         ax.set_xticklabels(session_labels, rotation=45, fontsize=8)
         ax.grid(True, alpha=0.3)
     
