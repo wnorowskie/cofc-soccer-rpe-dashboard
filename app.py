@@ -15,7 +15,7 @@ from pathlib import Path
 import requests
 from io import StringIO, BytesIO
 import base64
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import os
 
 app = Flask(__name__)
@@ -312,7 +312,11 @@ def dashboard():
         
         # Get stats
         total_players = len(df_filtered['player'].unique())
-        last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Eastern Daylight Time is UTC-4 (summer), Eastern Standard Time is UTC-5 (winter)
+        eastern_offset = timedelta(hours=-4)  # EDT for summer months
+        utc_now = datetime.utcnow()
+        eastern_time = utc_now + eastern_offset
+        last_updated = eastern_time.strftime("%Y-%m-%d %H:%M:%S")
         
         return render_template('dashboard.html',
                              avg_chart=avg_chart,
@@ -335,12 +339,17 @@ def refresh_data():
         session_count = len(df['session_key'].dropna().unique())
         player_count = len(df['player'].unique())
         
+        # Eastern Daylight Time is UTC-4 (summer), Eastern Standard Time is UTC-5 (winter)
+        eastern_offset = timedelta(hours=-4)  # EDT for summer months
+        utc_now = datetime.utcnow()
+        eastern_time = utc_now + eastern_offset
+        
         return jsonify({
             'status': 'success',
             'data_source': data_source,
             'session_count': session_count,
             'player_count': player_count,
-            'last_updated': datetime.now().isoformat()
+            'last_updated': eastern_time.isoformat()
         })
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
