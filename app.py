@@ -86,9 +86,9 @@ def generate_avg_chart(df_filtered, all_sessions):
                 # Clean the period string of any special characters
                 period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
                 
-                # Convert date to MM/DD format and period to AM/PM
+                # Convert date to M/DD format and period to AM/PM
                 date_obj = pd.to_datetime(date_str)
-                formatted_date = date_obj.strftime('%m/%d')
+                formatted_date = date_obj.strftime('%-m/%d')  # %-m removes leading zero from month
                 
                 if 'Morning' in period_clean or 'AM' in period_clean:
                     period_short = 'AM'
@@ -147,9 +147,9 @@ def generate_distribution_chart(df_filtered, all_sessions):
                 # Clean the period string
                 period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
                 
-                # Convert to MM/DD AM/PM format
+                # Convert to M/DD AM/PM format
                 date_obj = pd.to_datetime(date_str)
-                formatted_date = date_obj.strftime('%m/%d')
+                formatted_date = date_obj.strftime('%-m/%d')  # %-m removes leading zero from month
                 
                 if 'Morning' in period_clean or 'AM' in period_clean:
                     period_short = 'AM'
@@ -257,9 +257,9 @@ def generate_player_dashboard(df_filtered, all_sessions):
                     # Clean the period string of any special characters
                     period_clean = ''.join(c for c in period if c.isalnum() or c.isspace()).strip()
                     
-                    # Convert date to MM/DD format
+                    # Convert date to M/DD format
                     date_obj = pd.to_datetime(date_str)
-                    formatted_date = date_obj.strftime('%m/%d')
+                    formatted_date = date_obj.strftime('%-m/%d')  # %-m removes leading zero from month
                     
                     # Convert period to AM/PM
                     if 'Morning' in period_clean or 'AM' in period_clean:
