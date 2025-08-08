@@ -51,11 +51,11 @@ def load_data():
     
     return df, data_source
 
-def generate_avg_chart(df_filtered, first_three_sessions):
+def generate_avg_chart(df_filtered, all_sessions):
     """Generate average RPE chart"""
     plt.figure(figsize=(10, 6))
     avg_rpe = df_filtered.groupby('session_key')['rpe'].mean()
-    avg_rpe = avg_rpe.reindex(first_three_sessions)
+    avg_rpe = avg_rpe.reindex(all_sessions)
     
     bars = plt.bar(range(len(avg_rpe)), avg_rpe.values, color='skyblue', alpha=0.7)
     plt.xlabel('Session')
@@ -64,7 +64,7 @@ def generate_avg_chart(df_filtered, first_three_sessions):
     
     # Create clean labels without problematic characters
     clean_labels = []
-    for session in first_three_sessions:
+    for session in all_sessions:
         # Replace problematic en-dash with regular dash and split
         clean_session = session.replace('â\x80\x93', '-').replace('–', '-')
         if ' - ' in clean_session:
@@ -91,13 +91,13 @@ def generate_avg_chart(df_filtered, first_three_sessions):
     
     return img_str
 
-def generate_distribution_chart(df_filtered, first_three_sessions):
+def generate_distribution_chart(df_filtered, all_sessions):
     """Generate distribution chart"""
     plt.figure(figsize=(10, 6))
     
     session_data = []
     session_labels = []
-    for session in first_three_sessions:
+    for session in all_sessions:
         session_rpe = df_filtered[df_filtered['session_key'] == session]['rpe']
         session_data.append(session_rpe)
         
@@ -116,7 +116,8 @@ def generate_distribution_chart(df_filtered, first_three_sessions):
     
     box_plot = plt.boxplot(session_data, labels=session_labels, patch_artist=True)
     
-    colors = ['lightblue', 'lightcoral', 'lightgreen']
+    # Generate enough colors for all sessions
+    colors = plt.cm.Set3(np.linspace(0, 1, len(session_data)))
     for patch, color in zip(box_plot['boxes'], colors):
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
@@ -136,7 +137,7 @@ def generate_distribution_chart(df_filtered, first_three_sessions):
     
     return img_str
 
-def generate_player_dashboard(df_filtered, first_three_sessions):
+def generate_player_dashboard(df_filtered, all_sessions):
     """Generate player dashboard"""
     players = df_filtered['player'].unique()
     
@@ -165,7 +166,7 @@ def generate_player_dashboard(df_filtered, first_three_sessions):
         player_data = df_filtered[df_filtered['player'] == player]
         
         player_complete = []
-        for session in first_three_sessions:
+        for session in all_sessions:
             session_data = player_data[player_data['session_key'] == session]
             if len(session_data) > 0:
                 player_complete.append({'session_key': session, 'rpe': session_data['rpe'].iloc[0]})
@@ -176,17 +177,17 @@ def generate_player_dashboard(df_filtered, first_three_sessions):
         
         valid_data = player_df.dropna()
         if len(valid_data) > 0:
-            ax.plot(range(len(first_three_sessions)), player_df['rpe'], 'o-', linewidth=2, markersize=6)
+            ax.plot(range(len(all_sessions)), player_df['rpe'], 'o-', linewidth=2, markersize=6)
             ax.set_ylim(0, 10)
         
         ax.set_title(player, fontsize=10, pad=10)
         ax.set_xlabel('Session', fontsize=8)
         ax.set_ylabel('RPE', fontsize=8)
-        ax.set_xticks(range(len(first_three_sessions)))
+        ax.set_xticks(range(len(all_sessions)))
         
         # Create clean session labels
         session_labels = []
-        for s in first_three_sessions:
+        for s in all_sessions:
             clean_s = s.replace('â\x80\x93', '-').replace('–', '-')
             if ' - ' in clean_s:
                 parts = clean_s.split(' - ')
@@ -202,7 +203,7 @@ def generate_player_dashboard(df_filtered, first_three_sessions):
     for i in range(n_players, len(axes_flat)):
         axes_flat[i].set_visible(False)
     
-    plt.suptitle('Player RPE Dashboard - First Three Sessions', fontsize=14, y=0.98)
+    plt.suptitle('Player RPE Dashboard - All Sessions', fontsize=14, y=0.98)
     plt.tight_layout()
     
     img_buffer = BytesIO()
@@ -220,15 +221,15 @@ def dashboard():
         # Load fresh data
         df, data_source = load_data()
         
-        # Get session data
+        # Get session data - use all sessions instead of first three
         session_order = df.drop_duplicates('session_key').sort_values('sort_key')['session_key'].tolist()
-        first_three_sessions = session_order[:3]
-        df_filtered = df[df['session_key'].isin(first_three_sessions)]
+        all_sessions = session_order
+        df_filtered = df[df['session_key'].isin(all_sessions)]
         
         # Generate charts
-        avg_chart = generate_avg_chart(df_filtered, first_three_sessions)
-        dist_chart = generate_distribution_chart(df_filtered, first_three_sessions)
-        player_chart = generate_player_dashboard(df_filtered, first_three_sessions)
+        avg_chart = generate_avg_chart(df_filtered, all_sessions)
+        dist_chart = generate_distribution_chart(df_filtered, all_sessions)
+        player_chart = generate_player_dashboard(df_filtered, all_sessions)
         
         # Get stats
         total_players = len(df_filtered['player'].unique())
@@ -238,8 +239,8 @@ def dashboard():
                              avg_chart=avg_chart,
                              dist_chart=dist_chart,
                              player_chart=player_chart,
-                             sessions=first_three_sessions,
-                             sessions_json=str(first_three_sessions),
+                             sessions=all_sessions,
+                             sessions_json=str(all_sessions),
                              total_players=total_players,
                              data_source=data_source,
                              last_updated=last_updated)
