@@ -282,8 +282,8 @@ def generate_player_dashboard(df_filtered, all_sessions):
     for i in range(n_players, len(axes_flat)):
         axes_flat[i].set_visible(False)
     
-    plt.suptitle('Player RPE Dashboard - All Sessions', fontsize=14, y=0.98)
-    plt.tight_layout()
+    plt.suptitle('Player RPE Dashboard - All Sessions', fontsize=14, y=0.95)
+    plt.tight_layout(rect=[0, 0, 1, 0.93])
     
     img_buffer = BytesIO()
     plt.savefig(img_buffer, format='png', dpi=150, bbox_inches='tight')
